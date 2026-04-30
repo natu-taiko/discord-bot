@@ -25,7 +25,7 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# 通話参加（安定版）
+# 🔥 通話参加（ループ対策済み）
 @bot.command()
 async def join(ctx):
     if not ctx.author.voice:
@@ -35,6 +35,7 @@ async def join(ctx):
     channel = ctx.author.voice.channel
     vc = ctx.voice_client
 
+    # すでに同じチャンネルなら何もしない
     if vc and vc.channel == channel:
         await ctx.send("もう入ってるよ")
         return
@@ -51,46 +52,30 @@ async def join(ctx):
         print("voice error:", e)
         await ctx.send("通話接続失敗")
 
-# 通話退出
+# 🔥 通話退出
 @bot.command()
 async def leave(ctx):
     vc = ctx.voice_client
 
     if not vc:
-        await ctx.send("まだ入ってないよ")
+        await ctx.send("まだ通話入ってないよ")
         return
 
     await vc.disconnect()
     await ctx.send("抜けた！")
 
-# テストコマンド（これ超重要）
+# 🔥 テスト
 @bot.command()
 async def test(ctx):
     await ctx.send("動いてる！")
 
-# 効果音（ffmpeg必須）
+# 🔥 お知らせ機能（追加）
 @bot.command()
-async def sound(ctx):
-    if not ctx.author.voice:
-        await ctx.send("先に通話入って！")
-        return
+@commands.has_permissions(administrator=True)
+async def announce(ctx, *, text):
+    await ctx.send(f"📢 お知らせ：{text}")
 
-    channel = ctx.author.voice.channel
-    vc = ctx.voice_client
-
-    if not vc:
-        vc = await channel.connect()
-    else:
-        await vc.move_to(channel)
-
-    if vc.is_playing():
-        vc.stop()
-
-    vc.play(discord.FFmpegPCMAudio("sound.mp3"))
-
-    await ctx.send("🔊 効果音！")
-
-# エラー表示
+# 🔥 エラー表示
 @bot.event
 async def on_command_error(ctx, error):
     print("エラー:", error)
