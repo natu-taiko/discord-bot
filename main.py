@@ -1,31 +1,24 @@
 import discord
-from discord.ext import commands, tasks
-from datetime import datetime
+from discord import app_commands
 import os
 
-# =========================
-# 初期設定
-# =========================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-# お知らせ送信先チャンネルID
-CHANNEL_ID = 1473243172288069743  # ←ここ変更
+bot = discord.Client(intents=intents)
+tree = app_commands.CommandTree(bot)
 
 # =========================
 # 起動時
 # =========================
 @bot.event
 async def on_ready():
-    print(f"ログイン成功: {bot.user}")
-    print("コマンド一覧:", [c.name for c in bot.commands])
-    daily_announce.start()
+    await tree.sync()
+    print(f"起動完了: {bot.user}")
 
 # =========================
-# メッセージ反応
+# 「うお」反応
 # =========================
 @bot.event
 async def on_message(message):
@@ -33,95 +26,60 @@ async def on_message(message):
         return
 
     if "うお" in message.content:
-        await message.channel.send("冷笑まじか草wwwwwwwww")
-
-    await bot.process_commands(message)
+        await message.channel.send("うおおおお！")
 
 # =========================
-# 通話参加（安定版）
+# /join（安定版）
 # =========================
-@bot.command()
-async def join(ctx):
-    if not ctx.author.voice:
-        await ctx.send("先に通話入って！")
+@tree.command(name="join", description="ボイスチャンネルに参加")
+async def join(interaction: discord.Interaction):
+
+    if not interaction.user.voice:
+        await interaction.response.send_message("先に通話入って！", ephemeral=True)
         return
 
-    channel = ctx.author.voice.channel
-    vc = ctx.voice_client
+    channel = interaction.user.voice.channel
+    vc = interaction.guild.voice_client
 
+    # すでに同じチャンネルなら何もしない
     if vc and vc.channel == channel:
-        await ctx.send("もう入ってるよ")
+        await interaction.response.send_message("もう入ってるよ", ephemeral=True)
         return
 
     try:
+        # 既存VCがあれば移動、なければ接続
         if vc:
             await vc.move_to(channel)
         else:
             await channel.connect()
 
-        await ctx.send("通話入った！")
+        await interaction.response.send_message("通話入った！")
 
     except Exception as e:
         print("voice error:", e)
-        await ctx.send("通話接続失敗")
+        await interaction.response.send_message("通話接続失敗")
 
 # =========================
-# 通話退出
+# /leave（安定版）
 # =========================
-@bot.command()
-async def leave(ctx):
-    vc = ctx.voice_client
+@tree.command(name="leave", description="ボイスチャンネルから退出")
+async def leave(interaction: discord.Interaction):
+
+    vc = interaction.guild.voice_client
 
     if not vc:
-        await ctx.send("まだ通話入ってないよ")
+        await interaction.response.send_message("まだ通話入ってないよ", ephemeral=True)
         return
 
     await vc.disconnect()
-    await ctx.send("抜けた！")
+    await interaction.response.send_message("抜けた！")
 
 # =========================
-# テスト
+# /test
 # =========================
-@bot.command()
-async def test(ctx):
-    await ctx.send("動いてる！")
-
-# =========================
-# 手動お知らせ（管理者のみ）
-# =========================
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def announce(ctx, *, text):
-    await ctx.send(f"📢 お知らせ：{text}")
-
-# =========================
-# 自動お知らせ（例：20時）
-# =========================
-sent_today = False
-
-@tasks.loop(minutes=1)
-async def daily_announce():
-    global sent_today
-
-    now = datetime.now()
-
-    # 例：20:00に1回だけ送信
-    if now.hour == 0 and now.minute == 10:
-        if not sent_today:
-            channel = bot.get_channel(1473243172288069743)
-            if channel:
-                await channel.send("📢 定期メンテナンスのお知らせ")
-            sent_today = True
-    else:
-        sent_today = False
-
-# =========================
-# エラー処理
-# =========================
-@bot.event
-async def on_command_error(ctx, error):
-    print("エラー:", error)
-    await ctx.send(f"エラー: {error}")
+@tree.command(name="test", description="動作確認")
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message("動いてる！")
 
 # =========================
 # 起動
