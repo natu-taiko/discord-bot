@@ -19,10 +19,15 @@ async def on_message(message):
     if "うお" in message.content:
         await message.channel.send("冷笑まじかwwwwwwww")
 
-    if "死ね" in message.content:
-        await message.channel.send("なんでそういうこというの？ねぇなんで？なんで？そんなに死んでほしいの？")
-
-
     await bot.process_commands(message)
 
 bot.run(os.getenv("TOKEN"))
+
+@bot.command()
+async def join(ctx):
+    if ctx.author.voice:
+        channel = ctx.author.voice.channel
+        await channel.connect()
+        await ctx.send("通話入った！")
+    else:
+        await ctx.send("先に通話入って！")
