@@ -25,29 +25,6 @@ async def on_message(message):
     # ←これが超重要（コマンド動かす）
     await bot.process_commands(message)
 
-# 通話参加
-@bot.command()
-async def join(ctx):
-    if not ctx.author.voice:
-        await ctx.send("先に通話入って！")
-        return
-
-    channel = ctx.author.voice.channel
-
-    if ctx.voice_client:
-        await ctx.voice_client.move_to(channel)
-    else:
-        await channel.connect()
-
-    await ctx.send("通話入った！")
-
-# 通話退出
-@bot.command()
-async def leave(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        await ctx.send("抜けた！")
-
 # テストコマンド
 @bot.command()
 async def test(ctx):
@@ -60,13 +37,32 @@ async def on_command_error(ctx, error):
     print("エラー内容:", error)
 
 @bot.command()
-async def sound(ctx):
+async def join(ctx):
     if not ctx.author.voice:
         await ctx.send("先に通話入って！")
         return
 
     channel = ctx.author.voice.channel
+    vc = ctx.voice_client
 
+    # すでに同じチャンネルなら何もしない（重要）
+    if vc and vc.channel == channel:
+        await ctx.send("もう入ってるよ")
+        return
+
+    try:
+        # 既に別チャンネルなら移動
+        if vc:
+            await vc.move_to(channel)
+        else:
+            await channel.connect()
+
+        await ctx.send("通話入った！")
+
+    except Exception as e:
+        print("voice error:", e)
+        await ctx.send("通話接続失敗した…")
+    
     # まだBotがボイス入ってなければ接続
     if ctx.voice_client is None:
         vc = await channel.connect()
