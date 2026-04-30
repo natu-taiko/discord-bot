@@ -56,3 +56,7 @@ async def leave(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
         await ctx.send("抜けた！")
+
+@bot.event
+async def on_command_error(ctx, error):
+    print("エラー内容:", error)
