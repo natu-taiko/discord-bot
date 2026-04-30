@@ -23,6 +23,25 @@ async def on_message(message):
 
 bot.run(os.getenv("TOKEN"))
 
+responses = {
+    "死ね": "逆に殺してやろうか",
+    "そうだよ": "便乗botと同じように便乗してやるよ！",
+    "おはよう": "おはよー！",
+    "こんにちわ": "こんにちわ"
+}
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    for word, reply in responses.items():
+        if word in message.content:
+            await message.channel.send(reply)
+            break
+
+    await bot.process_commands(message)
+
 @bot.command()
 async def join(ctx):
     if ctx.author.voice:
