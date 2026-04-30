@@ -44,12 +44,18 @@ async def on_message(message):
 
 @bot.command()
 async def join(ctx):
-    if ctx.author.voice:
-        channel = ctx.author.voice.channel
-        await channel.connect()
-        await ctx.send("通話入った！")
-    else:
+    if not ctx.author.voice:
         await ctx.send("先に通話入って！")
+        return
+
+    channel = ctx.author.voice.channel
+
+    if ctx.voice_client:
+        await ctx.voice_client.move_to(channel)
+    else:
+        await channel.connect()
+
+    await ctx.send("通話入った！")
 
 @bot.command()
 async def leave(ctx):
