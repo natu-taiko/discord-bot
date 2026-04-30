@@ -79,4 +79,9 @@ async def join(ctx):
 
     await ctx.send("🔊 効果音鳴らした！")
 
+@bot.event
+async def on_ready():
+    print("起動完了")
+    print(bot.commands)
+
 bot.run(os.getenv("TOKEN"))
