@@ -59,4 +59,28 @@ async def on_command_error(ctx, error):
     await ctx.send(f"エラー: {error}")
     print("エラー内容:", error)
 
+@bot.command()
+async def sound(ctx):
+    if not ctx.author.voice:
+        await ctx.send("先に通話入って！")
+        return
+
+    channel = ctx.author.voice.channel
+
+    # まだBotがボイス入ってなければ接続
+    if ctx.voice_client is None:
+        vc = await channel.connect()
+    else:
+        vc = ctx.voice_client
+        await vc.move_to(channel)
+
+    # 再生中なら止める
+    if vc.is_playing():
+        vc.stop()
+
+    # 音再生（ファイル名ここ重要）
+    vc.play(discord.FFmpegPCMAudio("sound.mp3"))
+
+    await ctx.send("🔊 効果音鳴らした！")
+
 bot.run(os.getenv("TOKEN"))
