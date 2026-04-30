@@ -23,25 +23,6 @@ async def leave(ctx):
 async def on_command_error(ctx, error):
     print("エラー内容:", error)
 
-import discord
-from discord.ext import commands
-import os
-
-intents = discord.Intents.default()
-intents.message_content = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-@bot.event
-async def on_ready():
-    print(f"ログイン成功: {bot.user}")
-
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
-
-    if "うお" in message.content:
-        await message.channel.send("冷笑まじかwwwwwwww")
-bot.run(os.getenv("TOKEN"))
-await bot.process_commands(message)
+@bot.command()
+async def test(ctx):
+    await ctx.send("動いてる！")
