@@ -4,6 +4,7 @@ import os
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -11,7 +12,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     print(f"ログイン成功: {bot.user}")
-    print("コマンド一覧:", bot.commands)
+    print("コマンド一覧:", [c.name for c in bot.commands])
 
 # メッセージ反応
 @bot.event
@@ -20,22 +21,11 @@ async def on_message(message):
         return
 
     if "うお" in message.content:
-        await message.channel.send("冷笑まじかwwwwwwwww")
+        await message.channel.send("うおおおお！")
 
-    # ←これが超重要（コマンド動かす）
     await bot.process_commands(message)
 
-# テストコマンド
-@bot.command()
-async def test(ctx):
-    await ctx.send("動いてる！")
-
-# エラー表示
-@bot.event
-async def on_command_error(ctx, error):
-    await ctx.send(f"エラー: {error}")
-    print("エラー内容:", error)
-
+# 通話参加（安定版）
 @bot.command()
 async def join(ctx):
     if not ctx.author.voice:
@@ -45,13 +35,11 @@ async def join(ctx):
     channel = ctx.author.voice.channel
     vc = ctx.voice_client
 
-    # すでに同じチャンネルなら何もしない（重要）
     if vc and vc.channel == channel:
         await ctx.send("もう入ってるよ")
         return
 
     try:
-        # 既に別チャンネルなら移動
         if vc:
             await vc.move_to(channel)
         else:
@@ -61,27 +49,51 @@ async def join(ctx):
 
     except Exception as e:
         print("voice error:", e)
-        await ctx.send("通話接続失敗した…")
-    
-    # まだBotがボイス入ってなければ接続
-    if ctx.voice_client is None:
+        await ctx.send("通話接続失敗")
+
+# 通話退出
+@bot.command()
+async def leave(ctx):
+    vc = ctx.voice_client
+
+    if not vc:
+        await ctx.send("まだ入ってないよ")
+        return
+
+    await vc.disconnect()
+    await ctx.send("抜けた！")
+
+# テストコマンド（これ超重要）
+@bot.command()
+async def test(ctx):
+    await ctx.send("動いてる！")
+
+# 効果音（ffmpeg必須）
+@bot.command()
+async def sound(ctx):
+    if not ctx.author.voice:
+        await ctx.send("先に通話入って！")
+        return
+
+    channel = ctx.author.voice.channel
+    vc = ctx.voice_client
+
+    if not vc:
         vc = await channel.connect()
     else:
-        vc = ctx.voice_client
         await vc.move_to(channel)
 
-    # 再生中なら止める
     if vc.is_playing():
         vc.stop()
 
-    # 音再生（ファイル名ここ重要）
     vc.play(discord.FFmpegPCMAudio("sound.mp3"))
 
-    await ctx.send("🔊 効果音鳴らした！")
+    await ctx.send("🔊 効果音！")
 
+# エラー表示
 @bot.event
-async def on_ready():
-    print("起動完了")
-    print(bot.commands)
+async def on_command_error(ctx, error):
+    print("エラー:", error)
+    await ctx.send(f"エラー: {error}")
 
 bot.run(os.getenv("TOKEN"))
