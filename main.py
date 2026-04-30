@@ -17,7 +17,7 @@ async def on_message(message):
         return
 
     if "うお" in message.content:
-        await message.channel.send("うおおおお！")
+        await message.channel.send("冷笑まじかwwwwwwww")
 
     await bot.process_commands(message)
 
