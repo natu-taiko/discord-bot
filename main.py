@@ -14,8 +14,9 @@ tree = app_commands.CommandTree(bot)
 # =========================
 @bot.event
 async def on_ready():
-    await tree.sync()
+    await tree.sync(guild=discord.Object(id=1473227436585123986))
     print(f"起動: {bot.user}")
+    print("スラッシュコマンド同期完了")
 
 # =========================
 # うお反応
