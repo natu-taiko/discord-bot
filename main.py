@@ -31,3 +31,9 @@ async def join(ctx):
         await ctx.send("通話入った！")
     else:
         await ctx.send("先に通話入って！")
+
+@bot.command()
+async def leave(ctx):
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
+        await ctx.send("抜けた！")
