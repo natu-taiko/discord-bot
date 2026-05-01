@@ -11,7 +11,7 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 # =========================
-# ランダム反応データ
+# ランダム返信データ
 # =========================
 RESPONSES = {
     "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
@@ -29,15 +29,23 @@ async def on_ready():
     print(f"起動: {bot.user}")
 
 # =========================
-# ランダム反応
+# メッセージ反応（うお＋ランダム）
 # =========================
 @bot.event
 async def on_message(message):
+
     if message.author.bot:
         return
 
     text = message.content
 
+    # ① うお反応（最優先）
+    if "うお" in text:
+        await message.channel.send("冷笑まじか草wwww")
+        await bot.process_commands(message)
+        return
+
+    # ② ランダム返信
     for key in RESPONSES:
         if key in text:
             await message.channel.send(random.choice(RESPONSES[key]))
@@ -46,7 +54,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # =========================
-# /join（通話参加）
+# /join（通話参加・安定版）
 # =========================
 @tree.command(name="join", description="ボイスチャンネルに参加")
 async def join(interaction: discord.Interaction):
@@ -59,10 +67,12 @@ async def join(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
 
     try:
+        # すでに同じチャンネルなら何もしない
         if vc and vc.channel == channel:
             await interaction.response.send_message("もう入ってるよ", ephemeral=True)
             return
 
+        # 別チャンネルなら移動 or 新規接続
         if vc:
             await vc.move_to(channel)
         else:
@@ -83,7 +93,7 @@ async def leave(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
 
     if not vc:
-        await interaction.response.send_message("まだ入ってないよ", ephemeral=True)
+        await interaction.response.send_message("まだ通話入ってないよ", ephemeral=True)
         return
 
     await vc.disconnect()
