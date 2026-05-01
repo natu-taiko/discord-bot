@@ -17,8 +17,7 @@ RESPONSES = {
     "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
     "こんにちは": ["こんにちは！", "いい感じだね👍", "元気？"],
     "やばい": ["それは草", "まじで？", "終わったなｗ"],
-    "草": ["草ｗｗｗ", "わかる", "それな"],
-     "そうだよ": ["そうだよ（便乗）", "おっそうだな（便乗）", "そうですよ（便乗）"],
+    "草": ["草ｗｗｗ", "わかる", "それな"]
 }
 
 # =========================
@@ -26,8 +25,11 @@ RESPONSES = {
 # =========================
 @bot.event
 async def on_ready():
-    await tree.sync()
-    print(f"起動: {bot.user}")
+    try:
+        await tree.sync()
+        print(f"起動: {bot.user}")
+    except Exception as e:
+        print("SYNC ERROR:", e)
 
 # =========================
 # メッセージ反応（うお＋ランダム）
@@ -40,7 +42,7 @@ async def on_message(message):
 
     text = message.content
 
-    # ① うお反応（最優先）
+    # ① うお優先（暴走防止）
     if "うお" in text:
         await message.channel.send("冷笑まじか草wwww")
         await bot.process_commands(message)
@@ -55,7 +57,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # =========================
-# /join（通話参加・安定版）
+# /join（通話安定版）
 # =========================
 @tree.command(name="join", description="ボイスチャンネルに参加")
 async def join(interaction: discord.Interaction):
@@ -68,13 +70,13 @@ async def join(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
 
     try:
-        # すでに同じチャンネルなら何もしない
-        if vc and vc.channel == channel:
+        # 同じチャンネルなら何もしない
+        if vc and vc.is_connected() and vc.channel == channel:
             await interaction.response.send_message("もう入ってるよ", ephemeral=True)
             return
 
-        # 別チャンネルなら移動 or 新規接続
-        if vc:
+        # 別チャンネルなら移動
+        if vc and vc.is_connected():
             await vc.move_to(channel)
         else:
             await channel.connect()
@@ -82,18 +84,27 @@ async def join(interaction: discord.Interaction):
         await interaction.response.send_message("通話入った！")
 
     except Exception as e:
-        print("voice error:", e)
+        print("VOICE ERROR:", e)
+
+        # 壊れたVCだけ掃除（安全）
+        try:
+            vc = interaction.guild.voice_client
+            if vc:
+                await vc.disconnect()
+        except:
+            pass
+
         await interaction.response.send_message("接続失敗")
 
 # =========================
-# /leave（退出）
+# /leave
 # =========================
 @tree.command(name="leave", description="ボイスチャンネルから退出")
 async def leave(interaction: discord.Interaction):
 
     vc = interaction.guild.voice_client
 
-    if not vc:
+    if not vc or not vc.is_connected():
         await interaction.response.send_message("まだ通話入ってないよ", ephemeral=True)
         return
 
