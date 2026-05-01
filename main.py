@@ -1,5 +1,6 @@
 import discord
 from discord import app_commands
+import random
 import os
 
 intents = discord.Intents.default()
@@ -10,36 +11,44 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 # =========================
+# ランダム反応データ
+# =========================
+RESPONSES = {
+    "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
+    "こんにちは": ["こんにちは！", "いい感じだね👍", "元気？"],
+    "やばい": ["それは草", "まじで？", "終わったなｗ"],
+    "草": ["草ｗｗｗ", "わかる", "それな"]
+}
+
+# =========================
 # 起動
 # =========================
 @bot.event
 async def on_ready():
-    await tree.sync(guild=discord.Object(id=1473227436585123986))
+    await tree.sync()
     print(f"起動: {bot.user}")
-    print("スラッシュコマンド同期完了")
 
 # =========================
-# うお反応
+# ランダム反応
 # =========================
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
 
-    if "うお" in message.content:
-        await message.channel.send("冷笑まじか草wwww")
+    text = message.content
+
+    for key in RESPONSES:
+        if key in text:
+            await message.channel.send(random.choice(RESPONSES[key]))
+            break
+
+    await bot.process_commands(message)
 
 # =========================
-# /test
+# /join（通話参加）
 # =========================
-@tree.command(name="test", description="動作確認")
-async def test(interaction: discord.Interaction):
-    await interaction.response.send_message("動いてる！")
-
-# =========================
-# /join（安定版）
-# =========================
-@tree.command(name="join", description="ボイス参加")
+@tree.command(name="join", description="ボイスチャンネルに参加")
 async def join(interaction: discord.Interaction):
 
     if not interaction.user.voice:
@@ -66,9 +75,9 @@ async def join(interaction: discord.Interaction):
         await interaction.response.send_message("接続失敗")
 
 # =========================
-# /leave
+# /leave（退出）
 # =========================
-@tree.command(name="leave", description="ボイス退出")
+@tree.command(name="leave", description="ボイスチャンネルから退出")
 async def leave(interaction: discord.Interaction):
 
     vc = interaction.guild.voice_client
@@ -79,6 +88,13 @@ async def leave(interaction: discord.Interaction):
 
     await vc.disconnect()
     await interaction.response.send_message("抜けた！")
+
+# =========================
+# /test
+# =========================
+@tree.command(name="test", description="動作確認")
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message("動いてる！")
 
 # =========================
 # 起動
