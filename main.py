@@ -11,7 +11,7 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 # =========================
-# ランダム返信
+# ランダム返信（完全復活版）
 # =========================
 RESPONSES = {
     "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
@@ -35,9 +35,19 @@ memos = {}
 xp = {}
 level = {}
 uou_count = {}
+user_settings = {}
 
 def get_level(x):
     return int(x ** 0.5)
+
+def get_settings(user_id):
+    if user_id not in user_settings:
+        user_settings[user_id] = {
+            "level": True,
+            "reply": True,
+            "uou": True
+        }
+    return user_settings[user_id]
 
 # =========================
 # 起動
@@ -58,17 +68,23 @@ async def on_message(message):
 
     text = message.content
     user_id = message.author.id
+    settings = get_settings(user_id)
 
     # XP
     xp[user_id] = xp.get(user_id, 0) + 1
     new_level = get_level(xp[user_id])
 
-    if user_id not in level or new_level > level[user_id]:
+    if settings["level"]:
+        if user_id not in level or new_level > level[user_id]:
+            level[user_id] = new_level
+            await message.channel.send(f"{message.author.mention} レベル{new_level}になった！🎉")
+    else:
         level[user_id] = new_level
-        await message.channel.send(f"{message.author.mention} レベル{new_level}になった！🎉")
 
-    # うおカウント
-    if "うお" in text:
+    # =========================
+    # うお
+    # =========================
+    if "うお" in text and settings["uou"]:
         uou_count[user_id] = uou_count.get(user_id, 0) + 1
         count = uou_count[user_id]
 
@@ -80,149 +96,167 @@ async def on_message(message):
         await message.channel.send(msg)
         return
 
+    # =========================
     # カスタム返信
-    for key, value in custom_responses.items():
-        if key in text:
-            await message.channel.send(value)
-            return
+    # =========================
+    if settings["reply"]:
+        for key, value in custom_responses.items():
+            if key in text:
+                await message.channel.send(value)
+                return
 
-    # ランダム返信
-    for key in RESPONSES:
-        if key in text:
-            await message.channel.send(random.choice(RESPONSES[key]))
-            return
-
-    # AI風
-    if random.random() < 0.03:
-        await message.channel.send(random.choice([
-            "それちょっと分かる",
-            "深いなそれ…",
-            "急にどうしたｗ",
-            "まあそういう日もある"
-        ]))
+    # =========================
+    # ランダム返信（完全版）
+    # =========================
+    if settings["reply"]:
+        for key in RESPONSES:
+            if key in text:
+                await message.channel.send(random.choice(RESPONSES[key]))
+                return
 
 # =========================
 # コマンド
 # =========================
 
-@tree.command(name="help", description="コマンド一覧を見る")
+@tree.command(name="help", description="コマンド一覧")
 async def help_cmd(interaction: discord.Interaction):
 
     embed = discord.Embed(title="📖 コマンド一覧", color=0x00ffcc)
 
-    embed.add_field(name="🎮 遊び系", value="""
-/dice - サイコロ
-/uou_rank - うおランキング
-/level - レベル確認
+    embed.add_field(name="🎮 遊び", value="""
+/dice
+/uou_rank
+/level
 """, inline=False)
 
-    embed.add_field(name="🧠 便利系", value="""
-/memo - メモ保存
-/mymemo - メモ確認
-/remind - リマインダー
-/learn - 言葉を覚える
+    embed.add_field(name="🧠 便利", value="""
+/memo
+/mymemo
+/remind
+/learn
 """, inline=False)
 
-    embed.add_field(name="🛠 管理系", value="""
-/announce - お知らせ
-/clear - メッセージ削除
-/serverinfo - サーバー情報
+    embed.add_field(name="⚙️ 設定", value="""
+/setting
+/mysetting
+""", inline=False)
+
+    embed.add_field(name="🛠 管理", value="""
+/announce
+/clear
+/serverinfo
 """, inline=False)
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # =========================
-# サーバー情報
+# 設定
 # =========================
-@tree.command(name="serverinfo", description="サーバー情報を見る")
-async def serverinfo(interaction: discord.Interaction):
+@tree.command(name="setting", description="機能ON/OFF")
+async def setting(interaction: discord.Interaction, target: str, mode: str):
 
-    guild = interaction.guild
+    settings = get_settings(interaction.user.id)
 
-    embed = discord.Embed(title="📊 サーバー情報", color=0x3399ff)
-    embed.add_field(name="名前", value=guild.name)
-    embed.add_field(name="人数", value=guild.member_count)
-    embed.add_field(name="作成日", value=guild.created_at.strftime("%Y/%m/%d"))
+    if target not in ["level", "reply", "uou"]:
+        await interaction.response.send_message("level / reply / uou", ephemeral=True)
+        return
 
-    await interaction.response.send_message(embed=embed)
+    if mode not in ["on", "off"]:
+        await interaction.response.send_message("on / off", ephemeral=True)
+        return
+
+    settings[target] = (mode == "on")
+
+    await interaction.response.send_message(f"{target} → {mode}", ephemeral=True)
+
+@tree.command(name="mysetting", description="設定確認")
+async def mysetting(interaction: discord.Interaction):
+
+    settings = get_settings(interaction.user.id)
+
+    text = ""
+    for k, v in settings.items():
+        text += f"{k}: {'ON' if v else 'OFF'}\n"
+
+    await interaction.response.send_message(text, ephemeral=True)
 
 # =========================
-# メッセージ削除
+# 管理
 # =========================
-@tree.command(name="clear", description="メッセージを削除")
+@tree.command(name="clear", description="メッセージ削除")
 async def clear(interaction: discord.Interaction, amount: int):
 
     if not interaction.user.guild_permissions.manage_messages:
-        await interaction.response.send_message("権限ない", ephemeral=True)
+        await interaction.response.send_message("権限なし", ephemeral=True)
         return
 
     await interaction.channel.purge(limit=amount)
-    await interaction.response.send_message(f"{amount}件削除した", ephemeral=True)
+    await interaction.response.send_message("削除した", ephemeral=True)
 
-# =========================
-# 既存コマンド
-# =========================
-
-@tree.command(name="learn", description="言葉を覚えさせる")
-async def learn(interaction: discord.Interaction, word: str, reply: str):
-    custom_responses[word] = reply
-    await interaction.response.send_message(f"{word} を覚えた！")
-
-@tree.command(name="remind", description="指定秒後に通知する")
-async def remind(interaction: discord.Interaction, sec: int, msg: str):
-    await interaction.response.send_message(f"{sec}秒後に通知するよ！")
-    await asyncio.sleep(sec)
-    await interaction.followup.send(msg)
-
-@tree.command(name="dice", description="サイコロを振る")
-async def dice(interaction: discord.Interaction):
-    await interaction.response.send_message(f"🎲 {random.randint(1,6)}")
-
-@tree.command(name="memo", description="メモを保存する")
-async def memo(interaction: discord.Interaction, text: str):
-    memos[interaction.user.id] = text
-    await interaction.response.send_message("保存した！")
-
-@tree.command(name="mymemo", description="自分のメモを見る")
-async def mymemo(interaction: discord.Interaction):
-    text = memos.get(interaction.user.id, "メモないよ")
-    await interaction.response.send_message(text)
-
-@tree.command(name="level", description="自分のレベルを見る")
-async def level_cmd(interaction: discord.Interaction):
-    lv = level.get(interaction.user.id, 0)
-    await interaction.response.send_message(f"あなたのレベル: {lv}")
-
-@tree.command(name="uou_rank", description="うおの回数ランキングを見る")
-async def uou_rank(interaction: discord.Interaction):
-
-    if not uou_count:
-        await interaction.response.send_message("まだ誰も言ってない")
-        return
-
-    sorted_users = sorted(uou_count.items(), key=lambda x: x[1], reverse=True)
-
-    text = "🏆 うおランキング\n"
-    for i, (uid, cnt) in enumerate(sorted_users[:5], 1):
-        text += f"{i}位 <@{uid}> : {cnt}回\n"
-
-    await interaction.response.send_message(text)
-
-@tree.command(name="announce", description="お知らせを送信（管理者）")
+@tree.command(name="announce", description="お知らせ")
 async def announce(interaction: discord.Interaction, channel: discord.TextChannel, message: str):
 
     if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("管理者だけ", ephemeral=True)
+        await interaction.response.send_message("管理者のみ", ephemeral=True)
         return
 
-    embed = discord.Embed(title="📣 お知らせ", description=message, color=0xff5555)
+    embed = discord.Embed(title="📣 お知らせ", description=message)
     await channel.send(embed=embed)
 
     await interaction.response.send_message("送信した", ephemeral=True)
 
-@tree.command(name="test", description="動作確認")
-async def test(interaction: discord.Interaction):
-    await interaction.response.send_message("動いてる！")
+@tree.command(name="serverinfo", description="サーバー情報")
+async def serverinfo(interaction: discord.Interaction):
+
+    guild = interaction.guild
+
+    await interaction.response.send_message(
+        f"名前: {guild.name}\n人数: {guild.member_count}"
+    )
+
+# =========================
+# 便利系
+# =========================
+@tree.command(name="memo", description="メモ保存")
+async def memo(interaction: discord.Interaction, text: str):
+    memos[interaction.user.id] = text
+    await interaction.response.send_message("保存した")
+
+@tree.command(name="mymemo", description="メモ確認")
+async def mymemo(interaction: discord.Interaction):
+    await interaction.response.send_message(memos.get(interaction.user.id, "なし"))
+
+@tree.command(name="remind", description="リマインド")
+async def remind(interaction: discord.Interaction, sec: int, msg: str):
+    await interaction.response.send_message("OK")
+    await asyncio.sleep(sec)
+    await interaction.followup.send(msg)
+
+# =========================
+# 遊び
+# =========================
+@tree.command(name="dice", description="サイコロ")
+async def dice(interaction: discord.Interaction):
+    await interaction.response.send_message(str(random.randint(1,6)))
+
+@tree.command(name="level", description="レベル確認")
+async def level_cmd(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Lv {level.get(interaction.user.id, 0)}")
+
+@tree.command(name="uou_rank", description="うおランキング")
+async def uou_rank(interaction: discord.Interaction):
+
+    if not uou_count:
+        await interaction.response.send_message("まだない")
+        return
+
+    sorted_users = sorted(uou_count.items(), key=lambda x: x[1], reverse=True)
+
+    text = ""
+    for i, (uid, cnt) in enumerate(sorted_users[:5], 1):
+        text += f"{i}位 <@{uid}> : {cnt}\n"
+
+    await interaction.response.send_message(text)
 
 # =========================
 # 起動
