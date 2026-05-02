@@ -10,6 +10,9 @@ intents.voice_states = True
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
+# 🔒 通話接続ロック（ループ防止）
+connecting = {}
+
 # =========================
 # ランダム返信データ
 # =========================
@@ -25,7 +28,7 @@ RESPONSES = {
     "ちんこ": ["きも死ね", "俺のしゃぶれよ、あっ付いてなかった", "野獣先輩呼びます"],
     "gay": ["お前俺とヤる？", "Oh Shit...", "こいつがヤりたいってよ"],
     "そうですよ": ["そうだよ（便乗）", "おっ、そうだな（便乗）", "そうですよ（便乗）"],
-   }
+}
 
 # =========================
 # 起動
@@ -39,7 +42,7 @@ async def on_ready():
         print("SYNC ERROR:", e)
 
 # =========================
-# メッセージ反応（うお＋ランダム）
+# メッセージ反応
 # =========================
 @bot.event
 async def on_message(message):
@@ -49,59 +52,59 @@ async def on_message(message):
 
     text = message.content
 
-    # ① うお優先（暴走防止）
+    # うお優先
     if "うお" in text:
         await message.channel.send("冷笑まじか草wwww")
-        await bot.process_commands(message)
         return
 
-    # ② ランダム返信
+    # ランダム返信
     for key in RESPONSES:
         if key in text:
             await message.channel.send(random.choice(RESPONSES[key]))
             break
 
-    await bot.process_commands(message)
-
 # =========================
-# /join（通話安定版）
+# /join（完全安定版）
 # =========================
 @tree.command(name="join", description="ボイスチャンネルに参加")
 async def join(interaction: discord.Interaction):
 
-    if not interaction.user.voice:
-        await interaction.response.send_message("先に通話入って！", ephemeral=True)
+    guild_id = interaction.guild.id
+
+    # 🔒 接続中なら拒否（ループ防止）
+    if connecting.get(guild_id):
+        await interaction.response.send_message("接続中だからちょっと待って", ephemeral=True)
         return
 
-    channel = interaction.user.voice.channel
-    vc = interaction.guild.voice_client
+    connecting[guild_id] = True
 
     try:
-        # 同じチャンネルなら何もしない
+        if not interaction.user.voice:
+            await interaction.response.send_message("先に通話入って！", ephemeral=True)
+            return
+
+        channel = interaction.user.voice.channel
+        vc = interaction.guild.voice_client
+
+        # 同じVCなら何もしない
         if vc and vc.is_connected() and vc.channel == channel:
             await interaction.response.send_message("もう入ってるよ", ephemeral=True)
             return
 
-        # 別チャンネルなら移動
+        # 接続処理
         if vc and vc.is_connected():
             await vc.move_to(channel)
         else:
-            await channel.connect()
+            await channel.connect(timeout=10, reconnect=False)
 
         await interaction.response.send_message("通話入った！")
 
     except Exception as e:
         print("VOICE ERROR:", e)
-
-        # 壊れたVCだけ掃除（安全）
-        try:
-            vc = interaction.guild.voice_client
-            if vc:
-                await vc.disconnect()
-        except:
-            pass
-
         await interaction.response.send_message("接続失敗")
+
+    finally:
+        connecting[guild_id] = False
 
 # =========================
 # /leave
