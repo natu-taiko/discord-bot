@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 import random
 import os
+import asyncio
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -20,6 +21,14 @@ RESPONSES = {
     "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
     "こんにちは": ["こんにちは！", "いい感じだね👍", "元気？"],
     "草": ["草ｗｗｗ", "わかる", "それな"],
+    "おやすみ": ["おやすみなさい", "今日もお疲れ様", "一緒に寝るか？😎"],
+    "きも": ["そうか、ごめん", "えへ//そういうこと言っちゃうんだ//♡♡", "なんで人にきもとか言えるの？鏡見てこいよ"],
+    "そうだよ": ["そうだよ（便乗）", "おっ、そうだな（便乗）", "そうですよ（便乗）"],
+    "死ね": ["じゃあ死んでくる", "お前が死ね", "だってさお前死ねよ"],
+    "ペニス": ["野獣先輩呼んでこようか？", "ヤるか？", "ｱｱｱｱｱｱｱｱｱｱｱｱｱｱｱ///////////"],
+    "ちんこ": ["きも死ね", "俺のしゃぶれよ、あっ付いてなかった", "野獣先輩呼びます"],
+    "gay": ["お前俺とヤる？", "Oh Shit...", "こいつがヤりたいってよ"],
+    "そうですよ": ["そうだよ（便乗）", "おっ、そうだな（便乗）", "そうですよ（便乗）"],
 }
 
 # =========================
@@ -40,19 +49,21 @@ async def on_message(message):
 
     text = message.content
 
+    # うお優先
     if "うお" in text:
         await message.channel.send("冷笑まじか草wwww")
         return
 
+    # ランダム返信
     for key in RESPONSES:
         if key in text:
             await message.channel.send(random.choice(RESPONSES[key]))
             break
 
 # =========================
-# /join（最終安定版）
+# /join（最終：強制リセット版）
 # =========================
-@tree.command(name="join")
+@tree.command(name="join", description="ボイスチャンネルに参加")
 async def join(interaction: discord.Interaction):
 
     guild = interaction.guild
@@ -72,18 +83,19 @@ async def join(interaction: discord.Interaction):
         channel = interaction.user.voice.channel
         vc = guild.voice_client
 
-        # 既に同じ場所
-        if vc and vc.is_connected():
-            if vc.channel == channel:
-                await interaction.response.send_message("もう入ってる", ephemeral=True)
-                return
+        # 🔥 既存VCを完全リセット
+        if vc:
+            try:
+                await vc.disconnect(force=True)
+            except:
+                pass
 
-            await vc.move_to(channel)
-            await interaction.response.send_message("移動した！")
-            return
+        # 🔥 少し待つ（重要）
+        await asyncio.sleep(1)
 
-        # 新規接続
-        vc = await channel.connect(timeout=15)
+        # 🔥 新規接続
+        await channel.connect(timeout=15)
+
         await interaction.response.send_message("通話入った！")
 
     except Exception as e:
@@ -94,9 +106,9 @@ async def join(interaction: discord.Interaction):
         connecting[guild_id] = False
 
 # =========================
-# /leave（最終安定版）
+# /leave
 # =========================
-@tree.command(name="leave")
+@tree.command(name="leave", description="ボイスチャンネルから退出")
 async def leave(interaction: discord.Interaction):
 
     vc = interaction.guild.voice_client
@@ -107,6 +119,13 @@ async def leave(interaction: discord.Interaction):
 
     await vc.disconnect(force=True)
     await interaction.response.send_message("抜けた！")
+
+# =========================
+# /test
+# =========================
+@tree.command(name="test", description="動作確認")
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message("動いてる！")
 
 # =========================
 # 起動
