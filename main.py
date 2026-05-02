@@ -67,41 +67,32 @@ async def on_message(message):
         level[user_id] = new_level
         await message.channel.send(f"{message.author.mention} レベル{new_level}になった！🎉")
 
-    # =========================
     # うおカウント
-    # =========================
     if "うお" in text:
         uou_count[user_id] = uou_count.get(user_id, 0) + 1
         count = uou_count[user_id]
 
         msg = f"{message.author.mention} が「うお」を言った！\n回数: {count}回"
 
-        # 🎉 キリ番
         if count % 10 == 0:
-            msg += f"\n🎉 {count}回達成！すごい！"
+            msg += f"\n🎉 {count}回達成！"
 
         await message.channel.send(msg)
         return
 
-    # =========================
     # カスタム返信
-    # =========================
     for key, value in custom_responses.items():
         if key in text:
             await message.channel.send(value)
             return
 
-    # =========================
     # ランダム返信
-    # =========================
     for key in RESPONSES:
         if key in text:
             await message.channel.send(random.choice(RESPONSES[key]))
             return
 
-    # =========================
     # AI風
-    # =========================
     if random.random() < 0.03:
         await message.channel.send(random.choice([
             "それちょっと分かる",
@@ -111,57 +102,98 @@ async def on_message(message):
         ]))
 
 # =========================
-# /learn
+# コマンド
 # =========================
-@tree.command(name="learn")
+
+@tree.command(name="help", description="コマンド一覧を見る")
+async def help_cmd(interaction: discord.Interaction):
+
+    embed = discord.Embed(title="📖 コマンド一覧", color=0x00ffcc)
+
+    embed.add_field(name="🎮 遊び系", value="""
+/dice - サイコロ
+/uou_rank - うおランキング
+/level - レベル確認
+""", inline=False)
+
+    embed.add_field(name="🧠 便利系", value="""
+/memo - メモ保存
+/mymemo - メモ確認
+/remind - リマインダー
+/learn - 言葉を覚える
+""", inline=False)
+
+    embed.add_field(name="🛠 管理系", value="""
+/announce - お知らせ
+/clear - メッセージ削除
+/serverinfo - サーバー情報
+""", inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# =========================
+# サーバー情報
+# =========================
+@tree.command(name="serverinfo", description="サーバー情報を見る")
+async def serverinfo(interaction: discord.Interaction):
+
+    guild = interaction.guild
+
+    embed = discord.Embed(title="📊 サーバー情報", color=0x3399ff)
+    embed.add_field(name="名前", value=guild.name)
+    embed.add_field(name="人数", value=guild.member_count)
+    embed.add_field(name="作成日", value=guild.created_at.strftime("%Y/%m/%d"))
+
+    await interaction.response.send_message(embed=embed)
+
+# =========================
+# メッセージ削除
+# =========================
+@tree.command(name="clear", description="メッセージを削除")
+async def clear(interaction: discord.Interaction, amount: int):
+
+    if not interaction.user.guild_permissions.manage_messages:
+        await interaction.response.send_message("権限ない", ephemeral=True)
+        return
+
+    await interaction.channel.purge(limit=amount)
+    await interaction.response.send_message(f"{amount}件削除した", ephemeral=True)
+
+# =========================
+# 既存コマンド
+# =========================
+
+@tree.command(name="learn", description="言葉を覚えさせる")
 async def learn(interaction: discord.Interaction, word: str, reply: str):
     custom_responses[word] = reply
     await interaction.response.send_message(f"{word} を覚えた！")
 
-# =========================
-# /remind
-# =========================
-@tree.command(name="remind")
+@tree.command(name="remind", description="指定秒後に通知する")
 async def remind(interaction: discord.Interaction, sec: int, msg: str):
     await interaction.response.send_message(f"{sec}秒後に通知するよ！")
     await asyncio.sleep(sec)
     await interaction.followup.send(msg)
 
-# =========================
-# /dice
-# =========================
-@tree.command(name="dice")
+@tree.command(name="dice", description="サイコロを振る")
 async def dice(interaction: discord.Interaction):
     await interaction.response.send_message(f"🎲 {random.randint(1,6)}")
 
-# =========================
-# /memo
-# =========================
-@tree.command(name="memo")
+@tree.command(name="memo", description="メモを保存する")
 async def memo(interaction: discord.Interaction, text: str):
     memos[interaction.user.id] = text
     await interaction.response.send_message("保存した！")
 
-# =========================
-# /mymemo
-# =========================
-@tree.command(name="mymemo")
+@tree.command(name="mymemo", description="自分のメモを見る")
 async def mymemo(interaction: discord.Interaction):
     text = memos.get(interaction.user.id, "メモないよ")
     await interaction.response.send_message(text)
 
-# =========================
-# /level
-# =========================
-@tree.command(name="level")
+@tree.command(name="level", description="自分のレベルを見る")
 async def level_cmd(interaction: discord.Interaction):
     lv = level.get(interaction.user.id, 0)
     await interaction.response.send_message(f"あなたのレベル: {lv}")
 
-# =========================
-# /uou_rank（ランキング）
-# =========================
-@tree.command(name="uou_rank")
+@tree.command(name="uou_rank", description="うおの回数ランキングを見る")
 async def uou_rank(interaction: discord.Interaction):
 
     if not uou_count:
@@ -176,10 +208,19 @@ async def uou_rank(interaction: discord.Interaction):
 
     await interaction.response.send_message(text)
 
-# =========================
-# /test
-# =========================
-@tree.command(name="test")
+@tree.command(name="announce", description="お知らせを送信（管理者）")
+async def announce(interaction: discord.Interaction, channel: discord.TextChannel, message: str):
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("管理者だけ", ephemeral=True)
+        return
+
+    embed = discord.Embed(title="📣 お知らせ", description=message, color=0xff5555)
+    await channel.send(embed=embed)
+
+    await interaction.response.send_message("送信した", ephemeral=True)
+
+@tree.command(name="test", description="動作確認")
 async def test(interaction: discord.Interaction):
     await interaction.response.send_message("動いてる！")
 
