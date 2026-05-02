@@ -11,7 +11,7 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 # =========================
-# ランダム返信（完全復活版）
+# ランダム返信（完全版）
 # =========================
 RESPONSES = {
     "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
@@ -81,9 +81,7 @@ async def on_message(message):
     else:
         level[user_id] = new_level
 
-    # =========================
     # うお
-    # =========================
     if "うお" in text and settings["uou"]:
         uou_count[user_id] = uou_count.get(user_id, 0) + 1
         count = uou_count[user_id]
@@ -96,18 +94,14 @@ async def on_message(message):
         await message.channel.send(msg)
         return
 
-    # =========================
     # カスタム返信
-    # =========================
     if settings["reply"]:
         for key, value in custom_responses.items():
             if key in text:
                 await message.channel.send(value)
                 return
 
-    # =========================
-    # ランダム返信（完全版）
-    # =========================
+    # ランダム返信
     if settings["reply"]:
         for key in RESPONSES:
             if key in text:
@@ -120,34 +114,43 @@ async def on_message(message):
 
 @tree.command(name="help", description="コマンド一覧")
 async def help_cmd(interaction: discord.Interaction):
-
     embed = discord.Embed(title="📖 コマンド一覧", color=0x00ffcc)
 
-    embed.add_field(name="🎮 遊び", value="""
-/dice
-/uou_rank
-/level
-""", inline=False)
-
-    embed.add_field(name="🧠 便利", value="""
-/memo
-/mymemo
-/remind
-/learn
-""", inline=False)
-
-    embed.add_field(name="⚙️ 設定", value="""
-/setting
-/mysetting
-""", inline=False)
-
-    embed.add_field(name="🛠 管理", value="""
-/announce
-/clear
-/serverinfo
-""", inline=False)
+    embed.add_field(name="🎮 遊び", value="/dice\n/uou_rank\n/level", inline=False)
+    embed.add_field(name="🧠 便利", value="/memo\n/mymemo\n/remind\n/learn", inline=False)
+    embed.add_field(name="⚙️ 設定", value="/setting\n/mysetting\n/status", inline=False)
+    embed.add_field(name="🛠 管理", value="/announce\n/clear\n/serverinfo", inline=False)
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# =========================
+# ステータス変更
+# =========================
+@tree.command(name="status", description="Botのステータス変更（管理者）")
+async def status(interaction: discord.Interaction, type: str, text: str):
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("管理者のみ", ephemeral=True)
+        return
+
+    if type == "play":
+        activity = discord.Game(name=text)
+
+    elif type == "listen":
+        activity = discord.Activity(type=discord.ActivityType.listening, name=text)
+
+    elif type == "watch":
+        activity = discord.Activity(type=discord.ActivityType.watching, name=text)
+
+    elif type == "stream":
+        activity = discord.Streaming(name=text, url="https://twitch.tv/discord")
+
+    else:
+        await interaction.response.send_message("play / listen / watch / stream", ephemeral=True)
+        return
+
+    await bot.change_presence(activity=activity)
+    await interaction.response.send_message(f"変更: {text}")
 
 # =========================
 # 設定
@@ -166,7 +169,6 @@ async def setting(interaction: discord.Interaction, target: str, mode: str):
         return
 
     settings[target] = (mode == "on")
-
     await interaction.response.send_message(f"{target} → {mode}", ephemeral=True)
 
 @tree.command(name="mysetting", description="設定確認")
