@@ -10,8 +10,11 @@ intents.voice_states = True
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
-# 🔒 通話接続ロック（ループ防止）
+# 🔒 接続ロック
 connecting = {}
+
+# 🔊 VC管理（これが重要）
+voice_clients = {}
 
 # =========================
 # ランダム返信データ
@@ -71,7 +74,7 @@ async def join(interaction: discord.Interaction):
 
     guild_id = interaction.guild.id
 
-    # 🔒 接続中なら拒否（ループ防止）
+    # 🔒 接続中ロック
     if connecting.get(guild_id):
         await interaction.response.send_message("接続中だからちょっと待って", ephemeral=True)
         return
@@ -84,18 +87,19 @@ async def join(interaction: discord.Interaction):
             return
 
         channel = interaction.user.voice.channel
-        vc = interaction.guild.voice_client
+        vc = voice_clients.get(guild_id)
 
         # 同じVCなら何もしない
         if vc and vc.is_connected() and vc.channel == channel:
             await interaction.response.send_message("もう入ってるよ", ephemeral=True)
             return
 
-        # 接続処理
+        # 接続 or 移動
         if vc and vc.is_connected():
             await vc.move_to(channel)
         else:
-            await channel.connect(timeout=10, reconnect=False)
+            vc = await channel.connect(timeout=10, reconnect=False)
+            voice_clients[guild_id] = vc  # ←ここが重要
 
         await interaction.response.send_message("通話入った！")
 
@@ -112,13 +116,16 @@ async def join(interaction: discord.Interaction):
 @tree.command(name="leave", description="ボイスチャンネルから退出")
 async def leave(interaction: discord.Interaction):
 
-    vc = interaction.guild.voice_client
+    guild_id = interaction.guild.id
+    vc = voice_clients.get(guild_id)
 
     if not vc or not vc.is_connected():
         await interaction.response.send_message("まだ通話入ってないよ", ephemeral=True)
         return
 
     await vc.disconnect()
+    voice_clients.pop(guild_id, None)
+
     await interaction.response.send_message("抜けた！")
 
 # =========================
