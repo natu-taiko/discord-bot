@@ -25,6 +25,7 @@ RESPONSES = {
     "ちんこ": ["きも死ね", "俺のしゃぶれよ、あっ付いてなかった", "野獣先輩呼びます"],
     "gay": ["お前俺とヤる？", "Oh Shit...", "こいつがヤりたいってよ"],
     "そうですよ": ["そうだよ（便乗）", "おっ、そうだな（便乗）", "そうですよ（便乗）"],
+    "お、おう": ["そっち系か～😅", "お、おう😅", "う、うお🤣"],
 }
 
 # =========================
@@ -87,18 +88,6 @@ async def on_message(message):
         count = uou_count[user_id]
 
         msg = f"{message.author.mention} が「うお」を言った！\n回数: {count}回"
-
-        if count % 10 == 0:
-            msg += f"\n🎉 {count}回達成！"
-
-        await message.channel.send(msg)
-        return
-
-    if "お、おう" in text and settings["uou"]:
-        uou_count[user_id] = uou_count.get(user_id, 0) + 1
-        count = uou_count[user_id]
-
-        msg = f"{message.author.mention} が「お、おう」を言った！\n回数: {count}回"
 
         if count % 10 == 0:
             msg += f"\n🎉 {count}回達成！"
