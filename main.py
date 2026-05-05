@@ -65,15 +65,15 @@ RESPONSES = {
     "おやすみ": ["おやすみなさい", "今日もお疲れ様", "一緒に寝るか？😎"],
     "きも": ["そうか、ごめん", "えへ//そういうこと言っちゃうんだ//♡♡"],
     "死ね": ["じゃあ死んでくる", "お前が死ね"],
-    "ペニス": ["野獣先輩呼んでこようか？", "ヤるか？", "ｱｱｱｱｱｱｱｱｱｱｱｱｱｱｱ///////////"],
-    "ちんこ": ["きも死ね", "俺のしゃぶれよ、あっ付いてなかった", "野獣先輩呼びます"],
-    "gay": ["お前俺とヤる？", "Oh Shit...", "こいつがヤりたいってよ"],
-    "そうですよ": ["そうだよ（便乗）", "おっ、そうだな（便乗）", "そうですよ（便乗）"],
+    "ペニス": ["野獣先輩呼んでこようか？", "ヤるか？"],
+    "ちんこ": ["きも死ね", "俺のしゃぶれよ"],
+    "gay": ["お前俺とヤる？", "Oh Shit..."],
+    "そうですよ": ["そうだよ（便乗）"],
     "お、おう": ["そっち系か～😅", "お、おう😅", "う、うお🤣"],
 }
 
 # =========================
-# ユーザー設定取得
+# ユーザー設定
 # =========================
 def get_settings(user_id):
     if str(user_id) not in user_settings:
@@ -124,14 +124,14 @@ async def on_message(message):
             await message.channel.send(f"{message.author.mention} Lv{new_lv}になった！🎉")
             save_data()
 
-    # うおカウント
+    # うお
     if "うお" in text and settings["uou"]:
         uou_count[user_id] = int(uou_count.get(user_id, 0)) + 1
         await message.channel.send(f"{message.author.mention} うお回数: {uou_count[user_id]}")
         save_data()
         return
 
-    # ランダム返信
+    # 返信
     if settings["reply"]:
         for k, v in RESPONSES.items():
             if k in text:
@@ -140,7 +140,7 @@ async def on_message(message):
 
 
 # =========================
-# 設定コマンド
+# 設定
 # =========================
 @tree.command(name="setting", description="機能ON/OFF")
 async def setting(interaction: discord.Interaction, target: str, mode: str):
@@ -157,20 +157,17 @@ async def setting(interaction: discord.Interaction, target: str, mode: str):
     await interaction.response.send_message(f"{target} → {mode}", ephemeral=True)
 
 
-# =========================
-# 設定確認
-# =========================
 @tree.command(name="mysetting", description="設定確認")
 async def mysetting(interaction: discord.Interaction):
 
     settings = get_settings(str(interaction.user.id))
-
     text = "\n".join([f"{k}: {'ON' if v else 'OFF'}" for k, v in settings.items()])
+
     await interaction.response.send_message(text, ephemeral=True)
 
 
 # =========================
-# レベル確認
+# レベル
 # =========================
 @tree.command(name="level", description="レベル確認")
 async def level_cmd(interaction: discord.Interaction):
@@ -194,7 +191,7 @@ async def uou_rank(interaction: discord.Interaction):
 
 
 # =========================
-# お知らせチャンネル設定
+# お知らせ設定
 # =========================
 @tree.command(name="set_announce_channel", description="お知らせチャンネル設定")
 async def set_announce_channel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -207,6 +204,26 @@ async def set_announce_channel(interaction: discord.Interaction, channel: discor
     save_data()
 
     await interaction.response.send_message(f"{channel.mention} に設定したよ", ephemeral=True)
+
+
+# =========================
+# お知らせ解除（追加）
+# =========================
+@tree.command(name="unset_announce_channel", description="お知らせ設定解除")
+async def unset_announce_channel(interaction: discord.Interaction):
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("管理者のみ", ephemeral=True)
+        return
+
+    gid = str(interaction.guild.id)
+
+    if gid in guild_announce_channel:
+        del guild_announce_channel[gid]
+        save_data()
+        await interaction.response.send_message("お知らせ設定を解除したよ", ephemeral=True)
+    else:
+        await interaction.response.send_message("まだ設定されてないよ", ephemeral=True)
 
 
 # =========================
