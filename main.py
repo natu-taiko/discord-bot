@@ -16,7 +16,7 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 # =========================
-# 保存システム
+# データ保存（安全版）
 # =========================
 def load_data():
     if not os.path.exists(DATA_FILE):
@@ -29,15 +29,24 @@ def load_data():
         }
 
     with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+
+    # ★型ズレ防止（ここ超重要）
+    data["xp"] = {str(k): v for k, v in data.get("xp", {}).items()}
+    data["level"] = {str(k): v for k, v in data.get("level", {}).items()}
+    data["uou"] = {str(k): v for k, v in data.get("uou", {}).items()}
+    data["settings"] = {str(k): v for k, v in data.get("settings", {}).items()}
+    data["announce"] = {str(k): v for k, v in data.get("announce", {}).items()}
+
+    return data
 
 
 def save_data():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump({
-            "xp": xp,
-            "level": level,
-            "uou": uou_count,
+            "xp": {str(k): v for k, v in xp.items()},
+            "level": {str(k): v for k, v in level.items()},
+            "uou": {str(k): v for k, v in uou_count.items()},
             "settings": user_settings,
             "announce": guild_announce_channel
         }, f, ensure_ascii=False, indent=2)
@@ -56,15 +65,15 @@ guild_announce_channel = data["announce"]
 
 
 # =========================
-# ランダム返信
+# 返信データ
 # =========================
 RESPONSES = {
     "おはよう": ["おはよ〜！", "今日もがんばろ🔥", "起きた？"],
     "こんにちは": ["こんにちは！", "いい感じだね👍", "元気？"],
     "草": ["草ｗｗｗ", "わかる", "それな"],
-    "おやすみ": ["おやすみなさい", "今日もお疲れ様", "一緒に寝るか？😎"],
-    "きも": ["そうか、ごめん", "えへ//そういうこと言っちゃうんだ//♡♡"],
+    "おやすみ": ["おやすみなさい", "今日もお疲れ様"],
     "死ね": ["じゃあ死んでくる", "お前が死ね"],
+    "きも": ["そうか、ごめん", "えへ//"],
     "ペニス": ["野獣先輩呼んでこようか？", "ヤるか？"],
     "ちんこ": ["きも死ね", "俺のしゃぶれよ"],
     "gay": ["お前俺とヤる？", "Oh Shit..."],
@@ -72,8 +81,9 @@ RESPONSES = {
     "お、おう": ["そっち系か～😅", "お、おう😅", "う、うお🤣"],
 }
 
+
 # =========================
-# ユーザー設定
+# 設定取得
 # =========================
 def get_settings(user_id):
     if str(user_id) not in user_settings:
@@ -140,7 +150,7 @@ async def on_message(message):
 
 
 # =========================
-# 設定
+# 設定ON/OFF
 # =========================
 @tree.command(name="setting", description="機能ON/OFF")
 async def setting(interaction: discord.Interaction, target: str, mode: str):
@@ -157,6 +167,9 @@ async def setting(interaction: discord.Interaction, target: str, mode: str):
     await interaction.response.send_message(f"{target} → {mode}", ephemeral=True)
 
 
+# =========================
+# 設定確認
+# =========================
 @tree.command(name="mysetting", description="設定確認")
 async def mysetting(interaction: discord.Interaction):
 
@@ -207,9 +220,9 @@ async def set_announce_channel(interaction: discord.Interaction, channel: discor
 
 
 # =========================
-# お知らせ解除（追加）
+# お知らせ解除
 # =========================
-@tree.command(name="unset_announce_channel", description="お知らせ設定解除")
+@tree.command(name="unset_announce_channel", description="お知らせ解除")
 async def unset_announce_channel(interaction: discord.Interaction):
 
     if not interaction.user.guild_permissions.administrator:
@@ -221,15 +234,15 @@ async def unset_announce_channel(interaction: discord.Interaction):
     if gid in guild_announce_channel:
         del guild_announce_channel[gid]
         save_data()
-        await interaction.response.send_message("お知らせ設定を解除したよ", ephemeral=True)
+        await interaction.response.send_message("解除したよ", ephemeral=True)
     else:
-        await interaction.response.send_message("まだ設定されてないよ", ephemeral=True)
+        await interaction.response.send_message("未設定だよ", ephemeral=True)
 
 
 # =========================
-# 全サーバーお知らせ
+# 一斉お知らせ
 # =========================
-@tree.command(name="announce_all", description="全サーバーにお知らせ")
+@tree.command(name="announce_all", description="全サーバー通知")
 async def announce_all(interaction: discord.Interaction, message: str):
 
     if not interaction.user.guild_permissions.administrator:
@@ -256,7 +269,7 @@ async def announce_all(interaction: discord.Interaction, message: str):
         except:
             pass
 
-    await interaction.response.send_message(f"送信完了: {success}サーバー", ephemeral=True)
+    await interaction.response.send_message(f"送信完了: {success}", ephemeral=True)
 
 
 # =========================
