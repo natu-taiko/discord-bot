@@ -396,6 +396,74 @@ async def afk(
         f"AFK設定したよ: {reason}"
     )
 
+# =========================
+# ネタ煽り
+# =========================
+ROASTS = [
+    "典型的なチー牛発見wwwww",
+    "義務教育受けてるのに頭悪いねw",
+    "言ってること頭悪いねwwwww",
+    "包茎ちんぽ乙",
+    "バカ乙",
+    "ラグのせいにしてそう",
+    "BOTの方が強そう",
+    "逆にどうやったらそうなるん？",
+    "IQ3くらいの動きしてる",
+    "反応速度カタツムリで草",
+
+    # Fortnite系
+    "建築より先に現実立て直せ",
+    "その編集速度でよく生き残れたな",
+    "漁夫しかしてなさそう",
+    "そのエイムでアジア行ける？ｗ",
+    "BOT相手に本気出してそう",
+
+    # 勉強系
+    "先生も答案見て困惑してそう",
+    "その点数逆に才能ある",
+    "赤点界のレジェンド",
+    "テスト用紙泣いてるぞ",
+    "追試RTAやってる？",
+
+    # 日常系
+    "そのテンション深夜3時だろ",
+    "WiFiの方が反応速そう",
+    "存在がノイズキャンセル突破してる",
+    "今日も通常運転で安心した",
+    "逆に尊敬するレベル"
+]
+
+
+# =========================
+# roast
+# =========================
+@tree.command(name="roast", description="軽いネタ煽り")
+async def roast(
+    interaction: discord.Interaction,
+    member: discord.Member
+):
+
+    # Bot禁止
+    if member.bot:
+        await interaction.response.send_message(
+            "Botはいじめないで😢"
+        )
+        return
+
+    # 自分禁止
+    if member.id == interaction.user.id:
+        await interaction.response.send_message(
+            "自分煽ってて草"
+        )
+        return
+
+    # ランダム選択
+    msg = random.choice(ROASTS)
+
+    # 送信
+    await interaction.response.send_message(
+        f"{member.mention} {msg}"
+    )
 
 # =========================
 # 起動
